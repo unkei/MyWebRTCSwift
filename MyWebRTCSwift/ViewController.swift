@@ -15,7 +15,7 @@ let VIDEO_TRACK_ID = TAG + "VIDEO"
 let AUDIO_TRACK_ID = TAG + "AUDIO"
 let LOCAL_MEDIA_STREAM_ID = TAG + "STREAM"
 
-class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerConnectionDelegate {
+class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerConnectionDelegate, RTCEAGLVideoViewDelegate {
 
     var mediaStream: RTCMediaStream!
     var localVideoTrack: RTCVideoTrack!
@@ -37,6 +37,12 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
         sigConnect("unwebrtc.herokuapp.com");
 //        sigConnect("10.54.36.19:8000");
 
+        renderer = RTCEAGLVideoView(frame: self.view.frame)
+        renderer_sub = RTCEAGLVideoView(frame: CGRectMake(20, 50, 90, 120))
+        self.view.addSubview(renderer)
+        self.view.addSubview(renderer_sub)
+        renderer.delegate = self;
+
         var device: AVCaptureDevice! = nil
         for captureDevice in AVCaptureDevice.devicesWithMediaType(AVMediaTypeVideo) {
             if (captureDevice.position == AVCaptureDevicePosition.Front) {
@@ -52,11 +58,6 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
             localVideoTrack = peerConnectionFactory.videoTrackWithID(VIDEO_TRACK_ID, source: videoSource)
 //            AudioSource audioSource = peerConnectionFactory.createAudioSource(audioConstraints)
             localAudioTrack = peerConnectionFactory.audioTrackWithID(AUDIO_TRACK_ID)
-
-            renderer = RTCEAGLVideoView(frame: self.view.frame)
-            renderer_sub = RTCEAGLVideoView(frame: CGRectMake(20, 50, 90, 120))
-            self.view.addSubview(renderer)
-            self.view.addSubview(renderer_sub)
 
             mediaStream = peerConnectionFactory.mediaStreamWithLabel(LOCAL_MEDIA_STREAM_ID)
             mediaStream.addVideoTrack(localVideoTrack)
@@ -74,6 +75,14 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+
+    func videoView(videoView: RTCEAGLVideoView!, didChangeVideoSize size: CGSize) {
+        // scale by height
+        let w = renderer.bounds.height * size.width / size.height
+        let h = renderer.bounds.height
+        let x = (w - renderer.bounds.width) / 2
+        renderer.frame = CGRectMake(-x, 0, w, h)
     }
 
     // webrtc

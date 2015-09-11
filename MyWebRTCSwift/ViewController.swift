@@ -24,6 +24,7 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
     var remoteAudioTrack: RTCAudioTrack!
     var renderer: RTCEAGLVideoView!
     var renderer_sub: RTCEAGLVideoView!
+    var roomName: String!
 
     func Log(value:String) {
         println(TAG + " " + value)
@@ -85,6 +86,16 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
         renderer.frame = CGRectMake(-x, 0, w, h)
     }
 
+    func showRoomDialog() {
+        // show dialog to enter room number and call sigReconnect() to reconnect ws and join into new room
+        // Performing just leave and join again would work though but it needs sever to support leave message.
+        sigRecoonect();
+    }
+
+    func getRoomName() -> String {
+        return (roomName == nil || roomName.isEmpty) ? "_defaultroom": roomName;
+    }
+
     // webrtc
     var peerConnectionFactory: RTCPeerConnectionFactory! = nil
     var peerConnection: RTCPeerConnection! = nil
@@ -125,9 +136,11 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
     }
 
     func stop() {
-        peerConnection.close()
-        peerConnection = nil
-        peerStarted = false
+        if (peerConnection != nil) {
+            peerConnection.close()
+            peerConnection = nil
+            peerStarted = false
+        }
     }
 
     func prepareNewConnection() -> RTCPeerConnection {
@@ -278,6 +291,7 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
         socket = SocketIOClient(socketURL: wsServerUrl, opts: opts)
         socket.on("connect") { data in
             self.Log("WebSocket connection opened to: " + self.wsServerUrl);
+            self.sigEnter();
         }
         socket.on("disconnect") { data in
             self.Log("WebSocket connection closed.")
@@ -315,6 +329,17 @@ class ViewController: UIViewController, RTCSessionDescriptionDelegate, RTCPeerCo
             }
         }
         socket.connect();
+    }
+
+    func sigRecoonect() {
+        socket.disconnect(fast: true);
+        socket.connect();
+    }
+
+    func sigEnter() {
+        var roomName = getRoomName();
+        self.Log("Entering room: " + roomName);
+        socket.emit("enter", roomName);
     }
 
     func sigSend(msg:NSDictionary) {
